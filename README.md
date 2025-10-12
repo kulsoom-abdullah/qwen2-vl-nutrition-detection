@@ -147,9 +147,8 @@ print(response.json()['choices'][0]['message']['content'])
 
 ```
 transformers/
-├── fine_tuning_qwen2_vl_for_object_detection_trl_A100.ipynb          # Main notebook (with outputs, 20MB)
 ├── fine_tuning_qwen2_vl_for_object_detection_trl_A100_cleaned.ipynb  # Cleaned notebook (no outputs, 100KB)
-├── fine_tuning_qwen2_vl_A100_with_outputs.html                       # HTML export with all outputs rendered
+├── fine_tuning_qwen2_vl_A100_with_outputs.html                       # HTML export with all outputs rendered (21MB)
 ├── qwen2-7b-nutrition-baseline/                                      # Baseline results
 ├── qwen2-7b-nutrition-a100_exp1a/                                    # Exp 1a results (CSVs, PNGs)
 ├── qwen2-7b-nutrition-a100_exp1b/                                    # Exp 1b results (CSVs, PNGs)
