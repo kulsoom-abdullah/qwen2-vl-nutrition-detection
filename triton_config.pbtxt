@@ -1,0 +1,65 @@
+name: "qwen2_nutrition"
+backend: "vllm"
+max_batch_size: 8
+
+model_transaction_policy {
+  decoupled: True
+}
+
+input [
+  {
+    name: "text_input"
+    data_type: TYPE_STRING
+    dims: [ -1 ]
+  }
+]
+
+output [
+  {
+    name: "text_output"
+    data_type: TYPE_STRING
+    dims: [ -1 ]
+  }
+]
+
+instance_group [
+  {
+    count: 1
+    kind: KIND_GPU
+  }
+]
+
+parameters: {
+  key: "model"
+  value: {
+    string_value: "kulsoom-abdullah/qwen2-7b-nutrition-labels-detection"
+  }
+}
+
+parameters: {
+  key: "trust_remote_code"
+  value: {
+    string_value: "true"
+  }
+}
+
+parameters: {
+  key: "dtype"
+  value: {
+    string_value: "bfloat16"
+  }
+}
+
+parameters: {
+  key: "max_model_len"
+  value: {
+    string_value: "4096"
+  }
+}
+
+parameters: {
+  key: "gpu_memory_utilization"
+  value: {
+    string_value: "0.85"
+  }
+}

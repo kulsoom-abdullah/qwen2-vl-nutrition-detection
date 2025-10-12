@@ -4,9 +4,9 @@ A systematic exploration of parameter-efficient fine-tuning strategies for visio
 
 ## 🎯 Project Overview
 
-This project fine-tunes **Qwen2-VL-7B** to detect nutrition tables in product images using **QLoRA (4-bit quantized LoRA)** on Lambda Labs A100 GPUs. The notebook documents three experiments comparing different LoRA configurations and training strategies.
+This project fine-tunes **Qwen2-VL-7B** to detect nutrition tables in product images using **QLoRA (4-bit quantized LoRA)** on RunPod A100 GPUs. The notebook documents three experiments comparing different LoRA configurations and training strategies.
 
-![Prediction Example](images/failure_analysis_exp1a.jpg)
+![Prediction Example](images/failure_analysis_exp1a.png)
 
 **Dataset**: [OpenFoodFacts Nutrition Table Detection](https://huggingface.co/datasets/openfoodfacts/nutrition-table-detection) (1,106 training images, 123 test images)
 
@@ -30,7 +30,7 @@ This project fine-tunes **Qwen2-VL-7B** to detect nutrition tables in product im
 
 - **Model**: Qwen2-VL-7B-Instruct (7B parameters)
 - **Training**: QLoRA (4-bit NF4 quantization, LoRA rank=64, α=16)
-- **Hardware**: Lambda Labs A100 (40GB VRAM)
+- **Hardware**: RunPod A100 (80GB VRAM)
 - **Framework**: Hugging Face TRL, PEFT, transformers
 - **Training time**: ~2 hours per experiment (7 epochs, ~1,900 steps)
 
@@ -79,7 +79,29 @@ vllm serve kulsoom-abdullah/qwen2-7b-nutrition-labels-detection \
 
 ### Triton Inference Server (Optional)
 
-For production deployments requiring advanced features, the model can be served via NVIDIA Triton with vLLM backend. Configuration available in `/workspace/model_repository/qwen2_nutrition/config.pbtxt`.
+For production deployments requiring advanced features, the model can be served via NVIDIA Triton with vLLM backend.
+
+**Requirements:**
+- NVIDIA Triton Docker image: `nvcr.io/nvidia/tritonserver:24.08-vllm-python-py3`
+- transformers >= 4.45.0
+- vLLM >= 0.6.0
+- GPU: 40GB+ VRAM (A100 or equivalent)
+
+**Setup:**
+
+```bash
+# Upgrade packages in container
+pip install --upgrade "transformers>=4.45.0" "vllm>=0.6.0" qwen-vl-utils
+
+# Create model repository structure
+mkdir -p /workspace/model_repository/qwen2_nutrition/1
+
+# Create config (see triton_config.pbtxt in repo)
+# Start Triton
+tritonserver --model-repository=/workspace/model_repository
+```
+
+See `triton_config.pbtxt` for the complete Triton configuration.
 
 ### Inference Example
 
@@ -125,15 +147,20 @@ print(response.json()['choices'][0]['message']['content'])
 
 ```
 transformers/
-├── fine_tuning_qwen2_vl_for_object_detection_trl_A100_backup.ipynb  # Main notebook
+├── fine_tuning_qwen2_vl_for_object_detection_trl_A100.ipynb          # Main notebook (with outputs, 20MB)
+├── fine_tuning_qwen2_vl_for_object_detection_trl_A100_cleaned.ipynb  # Cleaned notebook (no outputs, 100KB)
+├── fine_tuning_qwen2_vl_A100_with_outputs.html                       # HTML export with all outputs rendered
 ├── qwen2-7b-nutrition-baseline/                                      # Baseline results
-├── qwen2-7b-nutrition-a100_exp1a/                                    # Exp 1a checkpoints + results
-├── qwen2-7b-nutrition-a100_exp1b/                                    # Exp 1b checkpoints + results
-├── qwen2-7b-nutrition-a100_exp2/                                     # Exp 2 checkpoints + results
+├── qwen2-7b-nutrition-a100_exp1a/                                    # Exp 1a results (CSVs, PNGs)
+├── qwen2-7b-nutrition-a100_exp1b/                                    # Exp 1b results (CSVs, PNGs)
+├── qwen2-7b-nutrition-a100_exp2/                                     # Exp 2 results (CSVs, PNGs)
+├── images/                                                           # Visualization outputs
 ├── deploy_to_vllm.py                                                 # LoRA merge script
-├── test_vllm_inference.py                                           # Inference test script
+├── triton_config.pbtxt                                               # Triton vLLM backend config
 └── README.md
 ```
+
+**Note**: Model checkpoints (900MB+) are excluded from the repository. The trained model is available on [HuggingFace Hub](https://huggingface.co/kulsoom-abdullah/qwen2-7b-nutrition-labels-detection).
 
 ## 🎓 Learning Resources
 
@@ -151,4 +178,4 @@ This project is for educational and research purposes.
 - **Qwen Team** for the excellent Qwen2-VL model
 - **OpenFoodFacts** for the nutrition table detection dataset
 - **Daniel Voigt Godoy** for [A Hands-On Guide to Fine-Tuning Large Language Models](https://leanpub.com/finetuning)
-- **Lambda Labs** for accessible GPU infrastructure
+- **RunPod** for accessible GPU infrastructure
