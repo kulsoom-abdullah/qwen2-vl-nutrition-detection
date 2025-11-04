@@ -62,48 +62,29 @@ jupyter notebook fine_tuning_qwen2_vl_for_object_detection_trl_A100_backup.ipynb
 
 ## 🚢 Production Deployment
 
-The fine-tuned model is deployed via vLLM with OpenAI-compatible API and available on HuggingFace Hub:
-- **Model**: [kulsoom-abdullah/qwen2-7b-nutrition-labels-detection](https://huggingface.co/kulsoom-abdullah/qwen2-7b-nutrition-labels-detection)
+The fine-tuned model is deployed on **NVIDIA Triton Inference Server** with vLLM backend for production-grade serving.
 
-### vLLM Deployment
+**Model**: [kulsoom-abdullah/qwen2-7b-nutrition-labels-detection](https://huggingface.co/kulsoom-abdullah/qwen2-7b-nutrition-labels-detection)
 
-```bash
-# Serve with vLLM (OpenAI-compatible API)
-vllm serve kulsoom-abdullah/qwen2-7b-nutrition-labels-detection \
-    --trust-remote-code \
-    --dtype bfloat16 \
-    --max-model-len 4096 \
-    --host 0.0.0.0 \
-    --port 8000
-```
+### Deployment Overview
 
-### Triton Inference Server (Optional)
+**Production deployment** completed using two approaches:
 
-For production deployments requiring advanced features, the model can be served via NVIDIA Triton with vLLM backend.
+1. **NVIDIA Triton Inference Server** - Enterprise-grade model serving
+   - Model loaded: 15.53 GB (bfloat16)
+   - Status: READY
+   - Backend: vLLM 0.11.0 with Flash Attention
+   - 📄 Setup: [TRITON_DEPLOYMENT.md](TRITON_DEPLOYMENT.md)
 
-**Requirements:**
-- NVIDIA Triton Docker image: `nvcr.io/nvidia/tritonserver:24.08-vllm-python-py3`
-- transformers >= 4.45.0
-- vLLM >= 0.6.0
-- GPU: 40GB+ VRAM (A100 or equivalent)
+2. **vLLM Standalone** - Quantization performance analysis
+   - Baseline (bfloat16): 22.8 GB memory, ~600ms latency
+   - FP8 quantized: 8.8 GB model weights (-45%), ~375ms latency (-37%)
+   - Accuracy: Identical predictions (quantization preserves model performance)
+   - 📊 Results: [QUANTIZATION_RESULTS.md](QUANTIZATION_RESULTS.md)
 
-**Setup:**
+**Key Finding**: FP8 quantization reduces model size by 45% and improves inference speed by 37% with zero accuracy loss, making it ideal for production deployment.
 
-```bash
-# Upgrade packages in container
-pip install --upgrade "transformers>=4.45.0" "vllm>=0.6.0" qwen-vl-utils
-
-# Create model repository structure
-mkdir -p /workspace/model_repository/qwen2_nutrition/1
-
-# Create config (see triton_config.pbtxt in repo)
-# Start Triton
-tritonserver --model-repository=/workspace/model_repository
-```
-
-See `triton_config.pbtxt` for the complete Triton configuration.
-
-### Inference Example
+### Quick Inference Example
 
 ```python
 import requests
@@ -147,15 +128,16 @@ print(response.json()['choices'][0]['message']['content'])
 
 ```
 transformers/
-├── fine_tuning_qwen2_vl_for_object_detection_trl_A100_cleaned.ipynb  # Cleaned notebook (no outputs, 100KB)
-├── fine_tuning_qwen2_vl_A100_with_outputs.html                       # HTML export with all outputs rendered (21MB)
-├── qwen2-7b-nutrition-baseline/                                      # Baseline results
-├── qwen2-7b-nutrition-a100_exp1a/                                    # Exp 1a results (CSVs, PNGs)
-├── qwen2-7b-nutrition-a100_exp1b/                                    # Exp 1b results (CSVs, PNGs)
-├── qwen2-7b-nutrition-a100_exp2/                                     # Exp 2 results (CSVs, PNGs)
+├── fine_tuning_qwen2_vl_for_object_detection_trl_A100_cleaned.ipynb  # Cleaned training notebook
+├── fine_tuning_qwen2_vl_A100_with_outputs.html                       # Full notebook with outputs (21MB)
+├── qwen2-7b-nutrition-baseline/                                      # Zero-shot baseline results
+├── qwen2-7b-nutrition-a100_exp1a/                                    # Exp 1a: LLM LoRA + masking ⭐
+├── qwen2-7b-nutrition-a100_exp1b/                                    # Exp 1b: LLM LoRA (no masking)
+├── qwen2-7b-nutrition-a100_exp2/                                     # Exp 2: Vision+LLM LoRA + masking
 ├── images/                                                           # Visualization outputs
-├── deploy_to_vllm.py                                                 # LoRA merge script
-├── triton_config.pbtxt                                               # Triton vLLM backend config
+├── deploy_to_vllm.py                                                 # LoRA adapter merge script
+├── TRITON_DEPLOYMENT.md                                              # Triton setup & quantization benchmark
+├── memory-optimization-doc.md                                        # Memory optimization strategies
 └── README.md
 ```
 
