@@ -1,6 +1,16 @@
-# Fine-Tuning Qwen2-VL-7B for Nutrition Table Detection
 
-A systematic exploration of parameter-efficient fine-tuning strategies for vision-language models on object detection tasks.
+# Qwen2-VL Nutrition Table Detection System
+
+A production-grade vision-language system for automated nutrition table detection. This project bridges the gap between multimodal research and enterprise deployment, featuring a fine-tuned Qwen2-VL-7B model achieving a **30.7% Mean IoU improvement** over the baseline.
+
+## 🚀 Production Engineering & System Architecture
+
+This repository implements high-availability engineering patterns designed for production environments:
+
+* **Strategy Pattern Inference:** Abstracted the inference layer to support multiple backends (vLLM, Triton, or Local Mocks). This enables **"Shift Left" testing** on standard CPU hardware without GPU overhead.
+* **BFF (Backend-for-Frontend) Validation:** A FastAPI service handles image validation, coordinate normalization, and resolution capping (1024px) to protect GPU resources from memory spikes.
+* **Robust Data Integrity:** Implemented strict Pydantic schemas with custom `@field_validator` logic to ensure model output integrity and prevent coordinate hallucinations.
+* **Reproducible Environment:** Full PEP 517 compliance with pinned dependencies and a multi-stage Dockerfile for slim, secure runtime artifacts.
 
 ## 🎯 Project Overview
 
@@ -10,7 +20,7 @@ This project fine-tunes **Qwen2-VL-7B** to detect nutrition tables in product im
 
 **Dataset**: [OpenFoodFacts Nutrition Table Detection](https://huggingface.co/datasets/openfoodfacts/nutrition-table-detection) (1,106 training images, 123 test images)
 
-## 📊 Results Summary
+## 📊 Experimental Results & Key Findings
 
 | Experiment | Mean IoU | F1@0.5 | Improvement |
 |:-----------|:--------:|:------:|:-----------:|
@@ -19,12 +29,12 @@ This project fine-tunes **Qwen2-VL-7B** to detect nutrition tables in product im
 | **Exp 1b: LLM LoRA (No Masking)** | 0.745 | 0.870 | +26.3% |
 | **Exp 2: Vision+LLM LoRA + Masking** | 0.748 | 0.863 | +26.8% |
 
-## 🔑 Key Findings
+### Key Insights
 
-1. **LLM-only LoRA is optimal** - Tuning vision encoder provides minimal benefit
-2. **Prompt masking improves performance** - Computing loss only on model responses reduces noise
-3. **QLoRA enables efficient fine-tuning** - 4-bit quantization with LoRA (rank=64) achieves strong results on a single A100
-4. **Consistent evaluation is critical** - Using identical setups (quantization, attention, resolution) across all experiments ensures fair comparison
+1. **User-Prompt Masking is critical** - Computing loss only on assistant responses (not user prompts) significantly reduced noise and improved coordinate precision by 3.5%
+2. **LLM-only LoRA is optimal** - Tuning the vision encoder provided minimal benefit for this detection task
+3. **Efficient fine-tuning** - 4-bit NF4 quantization with LoRA (rank=64) achieved strong results on a single A100 GPU
+4. **Production optimization** - FP8 quantization delivers 37% faster inference with zero accuracy loss
 
 ## 🛠️ Technical Details
 
@@ -46,17 +56,46 @@ This project fine-tunes **Qwen2-VL-7B** to detect nutrition tables in product im
 
 ## 🚀 Quick Start
 
+### Path A: Engineering (Production API)
+
+Deploy the system as a containerized service with built-in validation.
+
+**Option 1: Docker (Recommended)**
+
 ```bash
-# Clone repository
-git clone <repo-url>
-cd transformers
+docker build -t nutrition-detector .
+docker run -p 8000:8000 nutrition-detector
 
-# Install dependencies
-pip install -q transformers[torch] trl peft datasets accelerate bitsandbytes qwen-vl-utils
-
-# Open notebook
-jupyter notebook fine_tuning_qwen2_vl_for_object_detection_trl_A100_backup.ipynb
 ```
+
+**Option 2: Local Mock Mode (CPU-only)**
+
+```bash
+pip install -e .
+uvicorn nutrition_detector.api.app:app --host 127.0.0.1 --port 8000 --loop asyncio
+# Test it:
+python scripts/test_api_local.py path/to/image.jpg
+
+```
+
+### Path B: Research (Training & Notebooks)
+
+Reproduce the fine-tuning experiments and IoU benchmarks.
+
+1. **Environment Setup**:
+```bash
+conda create -n vlm_research python=3.10 -y
+conda activate vlm_research
+pip install -e .
+
+```
+
+
+2. **Explore Notebooks**:
+Open `notebooks/fine_tuning_qwen2_vl_for_object_detection_trl_A100_cleaned.ipynb` to view the full training pipeline and systematic LoRA comparisons.
+
+
+
 
 **Note**: Training requires an A100 GPU (40GB VRAM). Evaluation can run on smaller GPUs with 4-bit quantization.
 
@@ -74,13 +113,13 @@ The fine-tuned model is deployed on **NVIDIA Triton Inference Server** with vLLM
    - Model loaded: 15.53 GB (bfloat16)
    - Status: READY
    - Backend: vLLM 0.11.0 with Flash Attention
-   - 📄 Setup: [TRITON_DEPLOYMENT.md](TRITON_DEPLOYMENT.md)
+   - 📄 Setup: [TRITON_DEPLOYMENT.md](docs/TRITON_DEPLOYMENT.md)
 
 2. **vLLM Standalone** - Quantization performance analysis
    - Baseline (bfloat16): 22.8 GB memory, ~600ms latency
    - FP8 quantized: 8.8 GB model weights (-45%), ~375ms latency (-37%)
    - Accuracy: Identical predictions (quantization preserves model performance)
-   - 📊 Results: [QUANTIZATION_RESULTS.md](QUANTIZATION_RESULTS.md)
+   - 📊 Results: [QUANTIZATION_RESULTS.md](docs/QUANTIZATION_RESULTS.md)
 
 **Key Finding**: FP8 quantization reduces model size by 45% and improves inference speed by 37% with zero accuracy loss, making it ideal for production deployment.
 
@@ -126,19 +165,22 @@ print(response.json()['choices'][0]['message']['content'])
 
 ## 📦 Repository Structure
 
-```
-transformers/
-├── fine_tuning_qwen2_vl_for_object_detection_trl_A100_cleaned.ipynb  # Cleaned training notebook
-├── fine_tuning_qwen2_vl_A100_with_outputs.html                       # Full notebook with outputs (21MB)
-├── qwen2-7b-nutrition-baseline/                                      # Zero-shot baseline results
-├── qwen2-7b-nutrition-a100_exp1a/                                    # Exp 1a: LLM LoRA + masking ⭐
-├── qwen2-7b-nutrition-a100_exp1b/                                    # Exp 1b: LLM LoRA (no masking)
-├── qwen2-7b-nutrition-a100_exp2/                                     # Exp 2: Vision+LLM LoRA + masking
-├── images/                                                           # Visualization outputs
-├── deploy_to_vllm.py                                                 # LoRA adapter merge script
-├── TRITON_DEPLOYMENT.md                                              # Triton setup & quantization benchmark
-├── memory-optimization-doc.md                                        # Memory optimization strategies
-└── README.md
+```text
+qwen2-vl-nutrition-detection/
+├── src/nutrition_detector/      <-- Core production package (PEP 517)
+│   ├── api/                     <-- FastAPI "Lobby" with Pydantic guardrails
+│   ├── data/                    <-- Data collators & prompt masking logic
+│   ├── model/                   <-- Model loading orchestration (LoRA/Quantization)
+│   └── training/                <-- Managed SFTTrainer implementation
+├── tests/                       <-- Unit tests & Mock objects for CPU verification
+├── notebooks/                   <-- Archived training and research history
+├── experiments/                 <-- Quantitative results and IoU visualizations
+├── deploy/                      <-- Production Triton & vLLM configurations
+├── docs/                        <-- Technical deep-dives (Quantization, Optimization)
+├── scripts/                     <-- Utility scripts & API test clients
+├── pyproject.toml               <-- Pinned dependencies for reproducibility
+└── Dockerfile                   <-- Multi-stage production container
+
 ```
 
 **Note**: Model checkpoints (900MB+) are excluded from the repository. The trained model is available on [HuggingFace Hub](https://huggingface.co/kulsoom-abdullah/qwen2-7b-nutrition-labels-detection).
@@ -160,3 +202,5 @@ This project is for educational and research purposes.
 - **OpenFoodFacts** for the nutrition table detection dataset
 - **Daniel Voigt Godoy** for [A Hands-On Guide to Fine-Tuning Large Language Models](https://leanpub.com/finetuning)
 - **RunPod** for accessible GPU infrastructure
+
+
