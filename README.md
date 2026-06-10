@@ -18,7 +18,7 @@ This project fine-tunes **Qwen2-VL-7B** to detect nutrition tables in product im
 
 ![Prediction Example](images/failure_analysis_exp1a.png)
 
-**Dataset**: [OpenFoodFacts Nutrition Table Detection](https://huggingface.co/datasets/openfoodfacts/nutrition-table-detection) (1,106 training images, 123 test images)
+**Dataset**: [OpenFoodFacts Nutrition Table Detection](https://huggingface.co/datasets/openfoodfacts/nutrition-table-detection) (1,083 training images, 123 validation images)
 
 ## 📊 Experimental Results & Key Findings
 
@@ -33,13 +33,13 @@ This project fine-tunes **Qwen2-VL-7B** to detect nutrition tables in product im
 
 1. **User-Prompt Masking is critical** - Computing loss only on assistant responses (not user prompts) significantly reduced noise and improved coordinate precision by 3.5%
 2. **LLM-only LoRA is optimal** - Tuning the vision encoder provided minimal benefit for this detection task
-3. **Efficient fine-tuning** - 4-bit NF4 quantization with LoRA (rank=64) achieved strong results on a single A100 GPU
-4. **Production optimization** - FP8 quantization delivers 37% faster inference with zero accuracy loss
+3. **Efficient fine-tuning** - 4-bit NF4 quantization with LoRA (rank=8) achieved strong results on a single A100 GPU
+4. **Production optimization** - FP8 quantization delivers 37% faster steady-state inference with identical predictions on the benchmark image
 
 ## 🛠️ Technical Details
 
 - **Model**: Qwen2-VL-7B-Instruct (7B parameters)
-- **Training**: QLoRA (4-bit NF4 quantization, LoRA rank=64, α=16)
+- **Training**: QLoRA (4-bit NF4 quantization, LoRA rank=8, α=16)
 - **Hardware**: RunPod A100 (80GB VRAM)
 - **Framework**: Hugging Face TRL, PEFT, transformers
 - **Training time**: ~2 hours per experiment (7 epochs, ~1,900 steps)
@@ -117,11 +117,11 @@ The fine-tuned model is deployed on **NVIDIA Triton Inference Server** with vLLM
 
 2. **vLLM Standalone** - Quantization performance analysis
    - Baseline (bfloat16): 22.8 GB memory, ~600ms latency
-   - FP8 quantized: 8.8 GB model weights (-45%), ~375ms latency (-37%)
-   - Accuracy: Identical predictions (quantization preserves model performance)
+   - FP8 quantized: 8.8 GB model weights (-43%), ~375ms latency (-37%)
+   - Accuracy: Identical predictions on the benchmark image
    - 📊 Results: [QUANTIZATION_RESULTS.md](docs/QUANTIZATION_RESULTS.md)
 
-**Key Finding**: FP8 quantization reduces model size by 45% and improves inference speed by 37% with zero accuracy loss, making it ideal for production deployment.
+**Key Finding**: FP8 quantization reduces model weights by ~43% (15.5 GB → 8.8 GB) and improves steady-state inference speed by 37%, with identical predictions on the benchmark image — a strong candidate for production deployment.
 
 ### Quick Inference Example
 

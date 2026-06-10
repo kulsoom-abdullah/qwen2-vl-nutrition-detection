@@ -13,7 +13,7 @@ Performance comparison of bfloat16 baseline vs FP8 quantization for Qwen2-VL-7B 
 **Test Image**: [OpenFoodFacts Sample](https://static.openfoodfacts.org/images/products/004/400/000/7492/1.jpg) (1024x759)
 **Benchmark**: 5 inference requests per configuration
 
-![RunPod vLLM Configuration](images/vLLM_runpod_setup.png)
+![RunPod vLLM Configuration](../images/vLLM_runpod_setup.png)
 
 ## Results
 
@@ -31,32 +31,32 @@ Performance comparison of bfloat16 baseline vs FP8 quantization for Qwen2-VL-7B 
 ### Quantized (FP8)
 
 **GPU Memory**: 23,112 MB (23.1 GB total)
-**Model Weights**: 8.8 GB (45% reduction from bfloat16's ~15 GB)
+**Model Weights**: 8.8 GB (~43% reduction from bfloat16's 15.5 GB)
 **Inference Latency**:
 - Mean: 1,706 ms
 - Min: 371 ms
 - Max: 7,030 ms (first request - cold start)
 - **Steady-state**: ~375 ms (37% faster than bfloat16)
 
-**Model Output**: `[0.05, 0.38, 0.55, 0.6]` (identical to bfloat16 - accuracy preserved)
+**Model Output**: `[0.05, 0.38, 0.55, 0.6]` (identical to the bfloat16 output for this image)
 
-![Prediction Visualization](images/quantization_prediction.jpg)
+![Prediction Visualization](../images/quantization_prediction.jpg)
 
-**Hardware Note**: RTX 6000 Ada lacks native FP8 tensor cores and uses Marlin kernel fallback. While model weights reduced by 45%, total GPU memory remained similar due to hardware limitations. For production deployments requiring maximum memory efficiency, use GPUs with native FP8 support (H100/H200).
+**Hardware Note**: RTX 6000 Ada lacks native FP8 tensor cores and uses Marlin kernel fallback. While model weights reduced by ~43%, total GPU memory remained similar due to hardware limitations. For production deployments requiring maximum memory efficiency, use GPUs with native FP8 support (H100/H200).
 
 ## Comparison
 
 | Metric | bfloat16 | FP8 | Change |
 |:-------|:--------:|:---:|:------:|
-| **Model Weights** | ~15 GB | 8.8 GB | **-45%** ✅ |
+| **Model Weights** | 15.5 GB | 8.8 GB | **-43%** ✅ |
 | **Total GPU Memory** | 22.8 GB | 23.1 GB | +1% |
 | **Steady-state Latency** | ~600 ms | ~375 ms | **-37%** ✅ |
-| **Prediction Accuracy** | ✓ | ✓ | Identical |
+| **Prediction (test image)** | ✓ | ✓ | Identical |
 
 ## Analysis
 
 ### Memory Impact
-FP8 quantization reduced model weights by **45%** (15 GB → 8.8 GB). However, total GPU memory remained similar (22.8 GB → 23.1 GB) because:
+FP8 quantization reduced model weights by **~43%** (15.5 GB → 8.8 GB). However, total GPU memory remained similar (22.8 GB → 23.1 GB) because:
 1. KV cache dominates memory allocation (~50% of 48GB = 24GB pre-allocated)
 2. RTX 6000 Ada uses Marlin kernel fallback (no native FP8 support)
 
@@ -67,9 +67,9 @@ FP8 achieved **37% faster inference** (600ms → 375ms steady-state). Despite us
 
 ### Production Recommendation
 **Use FP8 quantization** for this model because:
-- ✅ 45% smaller model weights (faster loading, easier deployment)
+- ✅ ~43% smaller model weights (faster loading, easier deployment)
 - ✅ 37% faster inference (lower latency, higher throughput)
-- ✅ Identical accuracy (same predictions as bfloat16)
+- ✅ Identical predictions on the test image (vs. bfloat16)
 - ✅ Lower compute cost per inference
 
 **Hardware**: Deploy on H100/H200 for maximum memory efficiency, or RTX 6000 Ada for cost-effective performance with acceptable memory usage.

@@ -8,7 +8,7 @@ This document details the memory optimization techniques used to fine-tune Qwen2
 **Model**: Qwen2-VL-7B-Instruct (~7.6B parameters)  
 **Task**: Object detection (nutrition label bounding boxes)  
 **Hardware**: Single NVIDIA A100 80GB GPU  
-**Training samples**: ~1,100 images  
+**Training samples**: 1,083 images  
 **Context**: Vision-language model with both vision encoder and language decoder
 
 **Note**: Despite the "7B" naming, this model actually has approximately 7.6-7.8B parameters (HuggingFace lists as "8B params").
@@ -209,7 +209,7 @@ Headroom:                      ~71 GB   (89%)
 
 1. **Quantization (4-bit)**: Primary enabler - without this, model wouldn't fit
 2. **LoRA**: Made training feasible with minimal quality loss
-3. **Flash Attention 2**: Critical for batch processing and longer sequences
+3. **SDPA attention**: PyTorch's native kernels were stable alongside 4-bit quantization (Flash Attention 2 was not used)
 4. **Gradient Accumulation**: Allowed optimal batch sizes
 
 ### What Didn't Matter Much
@@ -218,7 +218,7 @@ Headroom:                      ~71 GB   (89%)
    - Would matter more for full fine-tuning (7B parameters)
    - Not worth the added complexity for LoRA setups
 
-2. **Aggressive Micro-batch Sizes**: With QLoRA + Flash Attention, we had plenty of memory
+2. **Aggressive Micro-batch Sizes**: With QLoRA + SDPA, we had plenty of memory
    - Could use batch_size=2 or even 4 comfortably
    - No need to go down to batch_size=1
 

@@ -18,7 +18,7 @@ This document details deploying the nutrition label detection model on Triton an
 **Environment**: `HF_TOKEN=<your_token>`
 **Ports**: 8000 (HTTP), 8001 (gRPC), 8002 (Metrics)
 
-![RunPod Configuration](images/triton_setup_runpod.png)
+![RunPod Configuration](../images/triton_setup_runpod.png)
 
 ## Setup Instructions
 
